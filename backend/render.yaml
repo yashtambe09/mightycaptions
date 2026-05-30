@@ -12,3 +12,5 @@ services:
         value: https://mightycaptions.in
       - key: TIMEOUT
         value: "300"
+      - key: DEEPGRAM_API_KEY
+        sync: false

@@ -1,48 +1,35 @@
-import anthropic
-import base64
-import json
 import os
+from deepgram import DeepgramClient, PrerecordedOptions
 
 
 async def transcribe_audio(audio_path: str) -> list:
     """
-    Transcribe audio using Claude's native audio input.
+    Transcribe audio using Deepgram Nova-2.
     Returns list of segments: [{"start": 0.0, "end": 2.5, "text": "..."}]
     """
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    deepgram = DeepgramClient(os.environ.get("DEEPGRAM_API_KEY"))
 
     with open(audio_path, "rb") as f:
-        audio_data = base64.standard_b64encode(f.read()).decode("utf-8")
+        buffer_data = f.read()
 
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4096,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "audio/mp3",
-                        "data": audio_data,
-                    },
-                },
-                {
-                    "type": "text",
-                    "text": (
-                        "Transcribe this audio exactly word for word.\n"
-                        "Return ONLY a JSON array of timed segments.\n"
-                        "Each segment should be 5-8 words maximum.\n"
-                        "Estimate timestamps based on natural speech pacing.\n"
-                        'Format: [{"start": 0.0, "end": 2.5, "text": "exactly what was said"}]\n'
-                        "No markdown, no explanation, just the JSON array."
-                    ),
-                },
-            ],
-        }],
+    payload = {"buffer": buffer_data}
+    options = PrerecordedOptions(
+        model="nova-2",
+        language="hi",       # Nova-2 handles Hindi, English, and mixed Indian speech well
+        smart_format=True,
+        utterances=True,
+        punctuate=True,
     )
 
-    text = response.content[0].text.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(text)
+    response = deepgram.listen.rest.v("1").transcribe_file(payload, options)
+
+    # Convert Deepgram utterances → our segment format
+    segments = []
+    for utterance in response.results.utterances:
+        segments.append({
+            "start": utterance.start,
+            "end": utterance.end,
+            "text": utterance.transcript,
+        })
+
+    return segments
