@@ -51,13 +51,20 @@ async def upload_video(file: UploadFile = File(...)):
     except Exception:
         thumbnail_b64 = ""
 
-    # Extract audio in background while user fills in settings
+    # Extract audio in background while user fills in settings.
+    # -map 0:a:0 selects only the first audio stream so unknown codecs
+    # like iPhone 17's APAC (stream index > 0) are silently skipped.
     audio_path = f"{job_dir}/audio.mp3"
     subprocess.Popen([
-        "ffmpeg", "-i", input_path,
-        "-vn", "-acodec", "mp3",
+        "ffmpeg", "-y",
+        "-analyzeduration", "100M", "-probesize", "100M",
+        "-i", input_path,
+        "-map", "0:a:0",
+        "-vn",
+        "-acodec", "libmp3lame",
         "-ar", "16000", "-ac", "1",
-        audio_path, "-y",
+        "-q:a", "5",
+        audio_path,
     ])
 
     return JSONResponse({

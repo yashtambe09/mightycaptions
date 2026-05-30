@@ -1,5 +1,5 @@
 import os
-import ffmpeg
+import subprocess
 
 STYLES = {
     "clean_white": "FontName=Montserrat-Bold,FontSize=48,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Alignment=2,MarginV=60",
@@ -39,19 +39,32 @@ def burn_captions(job_id: str, captions: list[dict], style: str) -> str:
 
     style_string = STYLES.get(style, STYLES["clean_white"])
 
-    # Escape the srt path for the subtitles filter
+    # Escape the srt path for the subtitles filter (colon must be escaped on Linux)
     escaped_srt = srt_path.replace("\\", "/").replace(":", "\\:")
 
-    stream = ffmpeg.input(input_path)
-    stream = ffmpeg.output(
-        stream,
-        output_path,
-        vf=f"subtitles={escaped_srt}:force_style='{style_string}'",
-        acodec="copy",
-        vcodec="libx264",
-        preset="fast",
-        crf=23,
+    # Use subprocess directly so we can:
+    # - map only the first video + first audio stream (skips APAC / unknown codecs)
+    # - re-encode audio to AAC (acodec copy hangs on APAC from iPhone 17+)
+    # - set a hard timeout so the route never blocks forever
+    result = subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-i", input_path,
+            "-map", "0:v:0",          # first video stream only
+            "-map", "0:a:0",          # first audio stream only (skips APAC)
+            "-vf", f"subtitles={escaped_srt}:force_style='{style_string}'",
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            "-c:a", "aac",            # always re-encode audio — never copy APAC
+            "-b:a", "128k",
+            output_path,
+        ],
+        capture_output=True,
+        timeout=480,                  # 8-minute hard ceiling
     )
-    ffmpeg.run(stream, overwrite_output=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.decode("utf-8", errors="replace"))
 
     return output_path
