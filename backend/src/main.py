@@ -25,7 +25,7 @@ app.include_router(generate.router, prefix="/api")
 app.include_router(process.router, prefix="/api")
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     try:
         subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
