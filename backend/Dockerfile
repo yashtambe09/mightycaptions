@@ -7,7 +7,8 @@ WORKDIR /app
 COPY fonts/ /usr/share/fonts/mightycaptions/
 RUN fc-cache -f -v
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 ENV PYTHONUNBUFFERED=1
 EXPOSE 3000
