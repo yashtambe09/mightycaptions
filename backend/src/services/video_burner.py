@@ -45,17 +45,29 @@ def burn_captions(job_id: str, captions: list[dict], style: str) -> str:
     # Use subprocess directly so we can:
     # - map only the first video + first audio stream (skips APAC / unknown codecs)
     # - re-encode audio to AAC (acodec copy hangs on APAC from iPhone 17+)
+    # - stay within the 512 MB RAM of the free Render instance
     # - set a hard timeout so the route never blocks forever
+    #
+    # Memory budget notes:
+    #   -threads 1        → libx264 allocates one set of frame buffers (~40 MB)
+    #                       vs. default (ncpus × buffers) which can exceed 512 MB
+    #   -preset ultrafast → no lookahead / subme / ref frames; minimal heap use
+    #   scale filter      → caps input at 1080p before encoding; a 4K frame is
+    #                       4× the memory of a 1080p frame in the filter graph
     result = subprocess.run(
         [
             "ffmpeg", "-y",
             "-i", input_path,
             "-map", "0:v:0",          # first video stream only
             "-map", "0:a:0",          # first audio stream only (skips APAC)
-            "-vf", f"subtitles={escaped_srt}:force_style='{style_string}'",
+            "-vf", (
+                "scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease,"
+                f"subtitles={escaped_srt}:force_style='{style_string}'"
+            ),
             "-c:v", "libx264",
-            "-preset", "fast",
-            "-crf", "23",
+            "-preset", "ultrafast",   # fast → ultrafast: ~60% less encoder RAM
+            "-threads", "1",          # single thread: largest single memory saving
+            "-crf", "28",             # slightly lower quality, much smaller buffers
             "-c:a", "aac",            # always re-encode audio — never copy APAC
             "-b:a", "128k",
             output_path,
