@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(pip install:*)",
+      "Bash(py --version)",
+      "Bash(python3 -m pip install -r D:/Projects/MightyCaptions/backend/requirements.txt)",
+      "Bash(python3 -m pip show anthropic python-dotenv httpx)",
+      "Bash(python3 -m uvicorn src.main:app --port 3000)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(kill %1)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: mightycaptions-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://mightycaptions.in

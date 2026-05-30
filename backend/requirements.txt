@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+ffmpeg-python
+httpx
+anthropic
+python-dotenv
+aiofiles
