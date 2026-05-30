@@ -1,7 +1,7 @@
 import os
 import uuid
 import base64
-import tempfile
+import subprocess
 import ffmpeg
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
@@ -48,8 +48,17 @@ async def upload_video(file: UploadFile = File(...)):
         )
         with open(thumbnail_path, "rb") as img:
             thumbnail_b64 = base64.b64encode(img.read()).decode("utf-8")
-    except Exception as e:
+    except Exception:
         thumbnail_b64 = ""
+
+    # Extract audio in background while user fills in settings
+    audio_path = f"{job_dir}/audio.mp3"
+    subprocess.Popen([
+        "ffmpeg", "-i", input_path,
+        "-vn", "-acodec", "mp3",
+        "-ar", "16000", "-ac", "1",
+        audio_path, "-y",
+    ])
 
     return JSONResponse({
         "jobId": job_id,

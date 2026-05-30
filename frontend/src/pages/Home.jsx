@@ -72,13 +72,13 @@ export default function Home() {
               <div className="flex-1 space-y-4">
                 <div>
                   <label className="text-sm font-medium text-secondary uppercase tracking-wider block mb-1">
-                    Description
+                    Optional context
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    placeholder="What's this reel about? (e.g. morning chai routine, beach day, cooking dal...)"
+                    placeholder="Helps with language adaptation — e.g. skincare routine, cooking video, travel vlog, motivational talk..."
                     className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-secondary outline-none focus:border-accent/60 resize-none transition-colors"
                   />
                 </div>
@@ -102,10 +102,10 @@ export default function Home() {
             >
               {generating ? (
                 <span className="flex items-center justify-center gap-3">
-                  <Spinner /> Analysing your reel...
+                  <Spinner /> Transcribing audio… this may take 20–30 seconds
                 </span>
               ) : (
-                'Generate Captions ✨'
+                'Transcribe & Generate ✨'
               )}
             </button>
 
@@ -132,7 +132,7 @@ function GeneratingSkeleton() {
       {[...Array(4)].map((_, i) => (
         <div key={i} className="h-12 bg-surface rounded-xl border border-border" />
       ))}
-      <p className="text-secondary text-sm text-center">Analysing your reel...</p>
+      <p className="text-secondary text-sm text-center">Transcribing audio… this may take 20–30 seconds</p>
     </div>
   )
 }

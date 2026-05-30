@@ -10,3 +10,5 @@ services:
         value: production
       - key: FRONTEND_URL
         value: https://mightycaptions.in
+      - key: TIMEOUT
+        value: "300"

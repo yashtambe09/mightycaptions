@@ -1,42 +1,50 @@
+import asyncio
 import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List
 
-from src.services.frame_extractor import extract_frames
-from src.services.caption_ai import generate_captions
+from src.services.transcriber import transcribe_audio
+from src.services.caption_ai import adapt_transcript
 
 router = APIRouter()
 
 
 class GenerateRequest(BaseModel):
     jobId: str
-    description: str
-    tone: str
-    languages: List[str]
+    description: str = ""
+    tone: str = "Relatable"
+    languages: List[str] = ["en-IN"]
 
 
 @router.post("/generate")
-async def generate(req: GenerateRequest):
-    input_path = f"/tmp/{req.jobId}/input.mp4"
-    if not os.path.exists(input_path):
-        raise HTTPException(status_code=404, detail="Job not found. Please upload a video first.")
+async def generate_captions(request: GenerateRequest):
+    audio_path = f"/tmp/{request.jobId}/audio.mp3"
+
+    if not os.path.exists(audio_path):
+        raise HTTPException(status_code=404, detail="Audio not found. Upload video first.")
 
     try:
-        frames = extract_frames(input_path, count=5)
+        transcript_segments = await transcribe_audio(audio_path)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Frame extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
-    try:
-        captions = await generate_captions(
-            frames=frames,
-            description=req.description,
-            tone=req.tone,
-            languages=req.languages,
-            input_path=input_path,
+    async def adapt_for_language(language: str):
+        return language, await adapt_transcript(
+            segments=transcript_segments,
+            language=language,
+            tone=request.tone,
+            description=request.description,
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Caption generation failed: {e}")
 
-    return JSONResponse({"jobId": req.jobId, "captions": captions})
+    try:
+        results = await asyncio.gather(*[
+            adapt_for_language(lang) for lang in request.languages
+        ])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Language adaptation failed: {str(e)}")
+
+    captions = {lang: segments for lang, segments in results}
+
+    return JSONResponse({"jobId": request.jobId, "captions": captions})

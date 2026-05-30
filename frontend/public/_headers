@@ -1,0 +1,5 @@
+/api/*
+  X-Accel-Buffering: no
+
+/*
+  X-Content-Type-Options: nosniff
